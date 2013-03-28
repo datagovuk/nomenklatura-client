@@ -15,9 +15,9 @@ class NKException(Exception):
 
 class NKDatasetException(NKException):
 
-    def __repr__(self):
+    def __str__(self):
         return "<NKDatasetException(%s:%s)>" % (self,
-                                               getattr(self, 'message', None))
+                                                Exception.__str__(self))
 
 
 class NKNoMatch(NKException):
@@ -62,7 +62,7 @@ class NKLink(object):
 class NKDataset(object):
 
     def __init__(self, dataset,
-                 host='http://nomenklatura.okfnlabs.org',
+                 host='http://nomenklatura.pudo.org',
                  api_key=None):
         self.host = host
         self.name = dataset
@@ -84,9 +84,11 @@ class NKDataset(object):
         response = self._session.get(self.host + '/' + self.name + path,
                                      params=params)
         if not response.ok:
-            #print [response.status_code, response.content]
+            print 'NK ERROR: ', response.status_code, response.content
             del self._session_obj
-        return response.status_code, response.json()
+        if not response.json:
+            raise NKDatasetException(response)
+        return response.status_code, response.json
 
     def _post(self, path, data={}, retry=True):
         data = json.dumps(data)
@@ -94,7 +96,7 @@ class NKDataset(object):
                                       allow_redirects=True,
                                       data=data)
         if not response.ok:
-            #print [response.status_code, response.content]
+            print 'NK ERROR: ', response.status_code, response.content
             del self._session_obj
         return (response.status_code,
                 json.loads(response.content) if response.content else {})
