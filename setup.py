@@ -17,7 +17,7 @@ setup(
     include_package_data=False,
     zip_safe=False,
     install_requires=[
-        "requests>=0.12"
+        "requests>=1.1"
     ],
     tests_require=[],
     entry_points=\

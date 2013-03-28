@@ -86,9 +86,9 @@ class NKDataset(object):
         if not response.ok:
             print 'NK ERROR: ', response.status_code, response.content
             del self._session_obj
-        if not response.json:
+        if not response.json():
             raise NKDatasetException(response)
-        return response.status_code, response.json
+        return response.status_code, response.json()
 
     def _post(self, path, data={}, retry=True):
         data = json.dumps(data)
