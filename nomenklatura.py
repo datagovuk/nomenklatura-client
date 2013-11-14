@@ -1,6 +1,10 @@
 import requests
 import json
 
+# NB In May 2013 the Nomenklatura terminology changed although the old words
+# remain in the actual API and some API docs:
+#   'value' became 'entity'
+#   'link' became 'alias'
 
 class NKObject(object):
   """ The basic Object we'll be inheriting from """
@@ -47,11 +51,18 @@ NKObject.Invalid = Invalid
 class Entity(NKObject):
 
   def __init__(self, dataset, data):
+    '''dataset - the name of the dataset
+    data - dict containing at least the name and data fields
+    '''
     self._dataset = dataset
     super(Entity, self).__init__(data)
+    if 'data' in data and isinstance(self.data, list):
+        # I don't know why NK returns the dict in a list. Lose the list.
+        assert len(self.data) == 1
+        self.data = self.data[0]
 
   def __repr__(self):
-    return "<Value(%s:%s:%s)>" % (self._dataset.name,
+    return "<Entity(%s:%s:%s)>" % (self._dataset.name,
                                   self.id, self.name)
 
   def __str__(self):
@@ -68,7 +79,7 @@ class Alias(NKObject):
       super(Alias, self).__init__(data)
 
   def __repr__(self):
-      return "<Link(%s:%s:%s:%s)>" % (self._dataset.name,
+      return "<Alias(%s:%s:%s:%s)>" % (self._dataset.name,
             self.id, self.name, self.is_matched)
 
 
@@ -138,8 +149,7 @@ class Dataset(NKObject):
         get_entity(id=23) -> get entity with id 23
         get_entity(name="FOO") -> get entity with value "FOO"
 
-        if neither id nor value are specified - raises a Value
-        Error
+        if neither id nor value are specified - raises a ValueError
     """
 
     if not (id or name):
@@ -158,7 +168,7 @@ class Dataset(NKObject):
         data={'name': name, 'data': data})
     if code == 400:
         raise self.NKException(val)
-    return Value(self, val)
+    return Entity(self, val)
 
   def ensure_entity(self, name, data={}):
     """ Makes sure you have an entity to work with:
@@ -168,6 +178,14 @@ class Dataset(NKObject):
         return self.get_value(value=value)
     except self.NKException:
         return self.add_value(value=value, data=data)
+
+  def update_entity(self, id, name, data={}):
+      """ Changes the name & data for an entity given by id."""
+      code, val = self._post('/entities/%s' % id,
+              data={'name': name, 'data': data})
+      if code == 400:
+          raise self.NKException(val)
+      return Entity(self, val)
 
   def entities(self):
       """ Returns a generator of all entities in the dataset """
@@ -191,6 +209,34 @@ class Dataset(NKObject):
       return (Alias(self, v) for v in vals)
 
   def lookup(self, name, context={}, readonly=False):
+      ''' Lookup (reconcile) a name.
+
+      On success it returns the relevent Entity.
+      Otherwise will raise NoMatch or Invalid.
+
+      If it is NoMatch, Nomenklatura will create a new alias for it to be
+      queued for manual reconciliation, unless you specify readonly=True.
+      '''
+      val = self._lookup(name, context=context, readonly=readonly)
+      return Entity(self, val.get('entity'))
+
+  def lookup_detailed(self, name, context={}, readonly=False):
+      ''' Lookup a name and know whether in Nomenklatura it is an Entity or Alias.
+
+      Otherwise the same as lookup().
+      '''
+      val = self._lookup(name, context=context, readonly=readonly)
+      # Nomenklatura looks for an Entity by name, followed by an Alias by name.
+      # Nomenklatura doesn't explicitly tell you if an Entity or Alias was
+      # found, but you can tell as the Alias has no entity['data'] property
+      # being there for Alias.
+      entity = val['entity']
+      if 'data' in entity:
+          return Entity(self, entity)
+      else:
+          return Alias(self, val)
+
+  def _lookup(self, name, context={}, readonly=False):
       code, val = self._post('/lookup',
             data={'name': name, 'readonly': readonly})
       if code == 404:
@@ -198,7 +244,7 @@ class Dataset(NKObject):
       elif code == 418:
           raise self.Invalid(val)
       else:
-          return Entity(self, val.get('entity'))
+          return val
 
   def match(self, alias_id, entity_id):
       code, val = self._post('/aliases/%s/match' % alias_id,
