@@ -1,23 +1,22 @@
 from setuptools import setup, find_packages
 
+
 setup(
-    name='nkclient',
-    version='0.1',
+    name='pynomenklatura',
+    version='0.3.1',
     description="Client library for nomenklatura, make record linkages on the web.",
-    long_description='',
+    long_description="",
     classifiers=[
         ],
     keywords='data mapping identity linkage record',
     author='Open Knowledge Foundation',
     author_email='info@okfn.org',
-    url='http://okfn.org',
+    url='http://github.com/okfn/nomenklatura-client',
     license='AGPLv3',
-    packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
-    namespace_packages=[],
-    include_package_data=False,
+    py_modules=['nomenklatura'],
     zip_safe=False,
     install_requires=[
-        "requests>=1.1"
+        "requests>=1.2"
     ],
     tests_require=[],
     entry_points=\
