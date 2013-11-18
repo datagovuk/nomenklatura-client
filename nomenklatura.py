@@ -124,6 +124,10 @@ class Dataset(NKObject):
       if not response.ok:
           #print [response.status_code, response.content]
           del self._session_obj
+      if response.status_code >= 500:
+          # Server error (often temporary), not a JSON response, so raise
+          # requests.exceptions.HTTPError
+          response.raise_for_status()
       return response.status_code, response.json()
 
   def _post(self, path, data={}, retry=True):
@@ -134,6 +138,10 @@ class Dataset(NKObject):
       if not response.ok:
           #print [response.status_code, response.content]
           del self._session_obj
+      if response.status_code >= 500:
+          # Server error (often temporary), not a JSON response, so raise
+          # requests.exceptions.HTTPError
+          response.raise_for_status()
       return (response.status_code,
               json.loads(response.content) if response.content else {})
 
