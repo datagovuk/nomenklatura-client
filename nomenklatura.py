@@ -156,7 +156,7 @@ class Entity(_NomenklaturaObject):
     @property
     def aliases(self):
         """ Returns a generator of all aliases of this entity. """
-        _, res = self._client.get('/entities/' + self.id + '/aliases')
+        _, res = self._client.get('/entities/%s/aliases' % self.id)
         while True:
             for entity in res.get('results'):
                 yield Entity(self._client, entity)
